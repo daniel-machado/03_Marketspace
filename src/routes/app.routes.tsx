@@ -1,21 +1,31 @@
-import { Platform } from 'react-native';
 import { useTheme } from 'native-base';
 import { createBottomTabNavigator, BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
- 
 import HomeSvg from '@assets/homeSVG.svg';
 import AdvertsSvg from '@assets/advertsSVG.svg';
 import LogoutSvg from '@assets/logoutSVG.svg'; 
 
-import { Home } from '@screens/Home';
+import  Home  from '@screens/Home';
 import { MyAdverts } from '@screens/MyAdverts';
-import { SignIn } from '../screens/SignIn';
+import { SignIn } from '@screens/SignIn';
+import { CreateAdverts } from '@screens/CreateAdverts';
+import { PreviewProduct } from '@screens/PreviewProduct';
+import { MyProduct } from '@screens/MyProduct';
+import { EditMyAdverts } from '@screens/EditMyAdverts';
+import { DetailsProduct } from '@screens/DetailsProduct';
+import { ProductToBuy } from '@screens/ProductToBuy';
+
 import { useAuth } from '@hooks/useAuth'
 
 type AppRoutes = {
   home: undefined;
   myAdverts: undefined;
   signOut: undefined;
-
+  createAdverts: undefined;
+  productToBuy: { productId: string }
+  editMyAdverts: { productId: string }
+  previewProduct: { product: string, edit?: boolean }
+  detailsProduct: {productId: string }
+  myProduct: { myProductId: string }
 }
 
 export type AppNavigatorRoutesProps = BottomTabNavigationProp<AppRoutes>;
@@ -35,9 +45,6 @@ export function AppRoutes(){
       tabBarStyle: {
         backgroundColor: colors.gray[700],
         borderTopWidth: 0,
-        //height: Platform.OS === 'android' ? 'auto' : 96,
-        //paddingBottom: sizes[10],
-        //paddingTop: sizes[6]
       }
     }}>
         
@@ -79,7 +86,52 @@ export function AppRoutes(){
           })}
         />
 
-      {/*<Screen 
+      <Screen 
+        name='createAdverts'
+        component={CreateAdverts}
+        options={{
+          tabBarButton: () => null,
+          tabBarStyle: { display: 'none' }
+        }}
+      />
+
+      <Screen 
+        name='previewProduct'
+        component={PreviewProduct}
+        options={{
+          tabBarButton: () => null,
+          tabBarStyle: { display: 'none' }
+        }}
+      />
+
+      <Screen 
+        name='myProduct'
+        component={MyProduct}
+        options={{
+          tabBarButton: () => null,
+          tabBarStyle: { display: 'none' }
+        }}
+      />
+
+      <Screen 
+        name='editMyAdverts'
+        component={EditMyAdverts}
+        options={{
+          tabBarButton: () => null,
+          tabBarStyle: { display: 'none' }
+        }}
+      />
+
+      <Screen 
+        name='detailsProduct'
+        component={DetailsProduct}
+        options={{
+          tabBarButton: () => null,
+          tabBarStyle: { display: 'none' }
+        }}
+      />
+
+      <Screen 
         name='productToBuy'
         component={ProductToBuy}
         options={{
@@ -87,7 +139,8 @@ export function AppRoutes(){
           tabBarStyle: { display: 'none' }
         }}
       />
-        */}
+
+
     </Navigator>
   )
 }

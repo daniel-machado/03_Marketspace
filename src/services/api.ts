@@ -84,9 +84,7 @@ api.registerInterceptTokenManager = signOut => {
         })
 
       }
-      
       signOut();
-      
     }
 
     if(requestError.response && requestError.response.data) {

@@ -1,6 +1,6 @@
 import { StatusBar } from 'react-native';
 import { NativeBaseProvider } from 'native-base';
-import { useFonts, Roboto_400Regular, Roboto_700Bold } from '@expo-google-fonts/roboto';
+import { useFonts, Karla_400Regular, Karla_700Bold } from '@expo-google-fonts/karla'
 
 import { Routes } from './src/routes';
 
@@ -11,7 +11,7 @@ import { THEME } from './src/theme';
 import { Loading } from '@components/Loading';
 
 export default function App() {
-  const [fontLoaded] = useFonts({ Roboto_400Regular, Roboto_700Bold });
+  const [fontLoaded] = useFonts({ Karla_400Regular, Karla_700Bold });
 
   return (
    <NativeBaseProvider theme={THEME}>

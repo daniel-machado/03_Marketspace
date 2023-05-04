@@ -9,7 +9,7 @@ export function Button({ title, variant = 'primary', ...rest }: Props){
   return (
     <ButtonNativeBase
       w="full"
-      h={12}
+      h={42}
       bg={variant === 'terceary' ? 'gray.100' 
           : variant === 'secondary' ? 'gray.500' 
           : 'blue.700' }

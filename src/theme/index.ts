@@ -27,8 +27,8 @@ export const THEME = extendTheme(
       }
     },
     fonts: {
-      heading: 'Roboto_700Bold',
-      body: 'Roboto_400Regular',
+      heading: 'Karla_700Bold',
+      body: 'Karla_400Regular',
     },
     fontSizes: {
       xs: 12,

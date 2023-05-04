@@ -11,7 +11,7 @@ import {VStack,
       } from 'native-base';
 
 import { AuthNavigatorRoutesProps } from '@routes/auth.routes';
-//import { useAuth } from '@hooks/useAuth';
+import { useAuth } from '@hooks/useAuth';
 import { api } from "@services/api";
 import { AppError } from '@utils/AppError';
 
@@ -61,7 +61,7 @@ export function SignUp(){
   const toast = useToast();
   const navigation = useNavigation<AuthNavigatorRoutesProps>();
 
-  //const { singIn } = useAuth();
+  const { singIn } = useAuth();
 
 
   function handleGoBack(){
@@ -87,14 +87,7 @@ export function SignUp(){
           "Content-Type": "multipart/form-data"
         }
       });
-      toast.show({
-        title: 'Usuário criado com sucesso.',
-        placement: 'top',
-        bgColor: 'green.500',
-        duration: 3000,
-      })
-      navigation.navigate('signIn');
-      //await singIn(email, password);
+      await singIn(email, password);
    
     } catch (error) {
       setIsLoading(false);
@@ -202,7 +195,7 @@ export function SignUp(){
         <Center>
           <Center my={5}>
             <UserPhoto
-              source={userPhoto ? {uri: userPhoto}: defaultPhotoUser}
+              source={userPhoto ? {uri: userPhoto.uri }: defaultPhotoUser}
               alt="Imagem do Usuário"
               size={PHOTO_SIZE}
             />
