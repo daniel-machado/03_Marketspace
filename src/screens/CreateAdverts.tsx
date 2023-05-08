@@ -10,6 +10,7 @@ import {
   ScrollView, 
   Pressable, 
   Image, 
+  Button as NativeButton,
   Radio, 
   Switch, 
   Checkbox, 
@@ -26,41 +27,61 @@ import * as FileSystem from 'expo-file-system'
 import * as ImagePicker from 'expo-image-picker'
 
 import { useAuth } from '@hooks/useAuth'
-import { PhotoFileDTO } from '@dtos/PhotoFileDTO'
+import { ImageDTO } from '@dtos/ImageDTO'
 import { AppNavigatorRoutesProps } from '@routes/app.routes'
 
 import { Input } from '@components/Input'
 import { Button } from '@components/Button'
+import { AppError } from '@utils/AppError'
+import { AdHeader } from '@components/AdvertsHeader'
+import { Plus, X } from 'phosphor-react-native'
+import { api } from '@services/api'
 
 interface FormDataProps {
-  name: string
+  title: string
   description: string
   price: string
 }
 
 const createAdvertsSchema = yup.object({
-  name: yup.string().required('Informe o nome do produto.'),
-  description: yup.string().required('Informe a descrição do produto.'),
-  price: yup.string().required('informe o valor do produto.')
-});
+  title: yup
+    .string()
+    .required('Informe um título.')
+    .min(6, 'O título deve ter no mínimo 6 letras.'),
+  description: yup
+    .string()
+    .required('Informe uma descrição.')
+    .min(20, 'A descrição deve ser detalhada!'),
+  price: yup.string().required('Informe um preço.'),
+})
 
 export function CreateAdverts(){
-  const [photos, setPhotos] = useState<PhotoFileDTO[]>([])
-  const [productIsNew, setProductIsNew] = useState('')
+  const [images, setImages] = useState<any[]>([])
+  const [isNew, setIsNew] = useState('')
   const [acceptTrade, setAcceptTrade] = useState(false)
   const [paymentMethods, setPaymentMethods]= useState<string[]>([])
+  const [isLoading, setIsLoading] = useState(false)
 
   const toast = useToast()
   const navigation = useNavigation<AppNavigatorRoutesProps>();
 
   const { user } = useAuth()
 
-  const { control, handleSubmit, formState: { errors } } = useForm<FormDataProps>({
+  const {
+    control,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<FormDataProps>({
+    defaultValues: {
+      title: '',
+      description: '',
+      price: '',
+    },
     resolver: yupResolver(createAdvertsSchema),
   })
 
   function handleBackToHome() {
-    navigation.navigate('home')
+    navigation.goBack();
   }
 
   async function handleSelectedPhoto(){
@@ -77,9 +98,13 @@ export function CreateAdverts(){
         return;
       }
 
+      if (images.length > 2) {
+        throw new AppError('Só pode selecionar 3 fotos!')
+      }
+
       if(photoSelected.assets[0].uri){
         const photoInfo = await FileSystem.getInfoAsync(photoSelected.assets[0].uri);
-        if(photoInfo.size && (photoInfo.size / 1024 / 1024) > 3){
+        if(photoInfo.exists && (photoInfo.size / 1024 / 1024) > 3){
           return toast.show({
             title: "Essa imagem é muito grande. Escolha uma de até 3MB.",
             placement: 'top',
@@ -95,124 +120,160 @@ export function CreateAdverts(){
           type: `${photoSelected.assets[0].type}/${fileExtension}`,
         } as any;
 
-        setPhotos(state => [...state, photoFile]);
+        setImages(state => [...state, photoFile]);
+        toast.show({
+          title: 'Foto selecionada!',
+          placement: 'top',
+          bgColor: 'green.500',
+         })
       }  
     } catch (error) {
-      console.log(error);
-    }
-  }
+      const isAppError = error instanceof AppError
+      const title = isAppError
+        ? error.message
+        : 'Não foi possível selecionar a imagem. Tente novamente!'
 
-  function handleDeletePhotoSelected(item: string) {
-    setPhotos(state => state.filter(img => img.name !== item))
-  }
-
-  function handleGoToPreviewProduct({ name, description, price }: FormDataProps) {
-    const data = {
-      name,
-      description,
-      is_new: productIsNew === 'novo' ? true : false,
-      /* no back end na tabela de produtos, o price está como inteiro 
-      sendo assim quando cria um produto com . ou , ele da error interno */
-      price: Number(price), 
-      accept_trade: acceptTrade,
-      payment_methods: paymentMethods,
-      product_images: photos,
-      user: {
-        avatar: user.avatar,
-        name: user.name,
-        tel: user.tel
+      if (isAppError) {
+        toast.show({
+          title,
+          placement: 'top',
+          bgColor: 'red.500',
+        })
       }
+    } finally {
+      setIsLoading(false)
     }
-    navigation.navigate('previewProduct', { product: JSON.stringify(data)})
+  }
+
+  function handleDeletePhotoSelected(id: string) {
+    const newArray = images.filter((item) => item.path !== id);
+    setImages(newArray);
+  }
+
+  function handleGoToPreviewProduct({ title, description, price }: FormDataProps) {
+    if (images.length === 0) {
+      return toast.show({
+        title: 'Selecione ao menos uma imagem!',
+        placement: 'top',
+        bgColor: 'red.500',
+      })
+    }
+
+    if (paymentMethods.length === 0) {
+      return toast.show({
+        title: 'Selecione ao menos um meio de pagamento!',
+        placement: 'top',
+        bgColor: 'red.500',
+      })
+    }
+
+    navigation.navigate('previewAdverts', {
+      title,
+      description,
+      price, 
+      images,
+      paymentMethods,
+      isNew: isNew === 'novo' ? true : false,
+      acceptTrade,
+    })
   }
 
   return(
-    <ScrollView backgroundColor='gray.bg'>
+    <ScrollView 
+      contentContainerStyle={{ flexGrow: 1 }}
+      showsVerticalScrollIndicator={false}
+      backgroundColor='gray.bg'
+    >  
       <Box safeArea px={5}>
-        <HStack mt={5} alignItems='center' mb={6}>
-          <Pressable onPress={handleBackToHome}>
-            <Icon
-              as={MaterialIcons} name='arrow-back' size={6} color='gray.100'
-            />
-          </Pressable>
+        <AdHeader title="Criar Anúncio" mt={12} goBack={handleBackToHome} />
 
-          <Center flex={1}>
-            <Heading>
-              Criar anúncio
-            </Heading>
-          </Center>
-        </HStack>
-
-        <Text fontFamily='heading' fontSize={16} mb={1}>
+        <Heading fontFamily='heading' fontSize={16} mb={1}>
           Imagens
-        </Text>
+        </Heading>
 
         <Text color='gray.300' mb={4}>
           Escolha até 3 imagens para mostrar o quanto o seu produto é incrível!
         </Text>
 
-        <HStack mb={6}>
-          <FlatList 
-            data={photos}
-            keyExtractor={item => item.name}
-            renderItem={({ item }) => (
-              <Box>
-                <Image
-                  source={{ uri: item.uri }} alt='Imagem do Produto'
-                  h='100' w='100' rounded='lg' mr={2}
-                />
-                <Pressable 
-                  w={4} h= {4} backgroundColor='gray.200' 
-                  alignItems='center' justifyContent='center'
-                  rounded='full' position='absolute' top='1' right='3'
-                  onPress={() => handleDeletePhotoSelected(item.name)}
-                >
-                  <Icon
-                    as={MaterialIcons} name='close'
-                    size={3} color='gray.700'
+        <HStack my={5}>
+          { images.length > 0 &&
+            images.map((imageData, index) => (
+              <Box key={index} ml={2}>
+                <NativeButton
+                    position="absolute"
+                    zIndex={100}
+                    borderRadius={9999}
+                    left={85}
+                    top={1}
+                    w={5}
+                    h={6}
+                    bg="gray.200"
+                    _pressed={{
+                      bg: 'gray.500',
+                    }}
+                    onPress={() => handleDeletePhotoSelected(imageData.id)}
+                  >
+                    <Box justifyContent="center" alignItems="center">
+                      <X size={12} weight="fill" color="white" />
+                    </Box>
+                  </NativeButton>
+                  <Image
+                    w={110}
+                    h={110}
+                    source={{ uri: imageData.uri }}
+                    alt="Imagem do novo anúncio"
+                    resizeMode="cover"
+                    borderRadius={8}
                   />
-                </Pressable>
               </Box>
-            )}
-            horizontal showsHorizontalScrollIndicator={false}
-            ListFooterComponent={
-              <Pressable 
-                w='100' h='100' backgroundColor='gray.500' 
-                alignItems='center' justifyContent='center' rounded='lg'
+            ))}
+          
+            { images.length < 3 && (
+                <NativeButton
+                  bg="gray.500"
+                  w={110}
+                  h={110}
+                  ml={2}
+                  _pressed={{
+                  borderWidth: 1,
+                  bg: 'gray.500',
+                  borderColor: 'gray.600',
+                }}
                 onPress={handleSelectedPhoto}
               >
-                <Icon
-                  as={MaterialIcons} name='add' size={6}color='gray.400'
-                />
-              </Pressable>
-            }
-          />
-        </HStack>
+                <Plus color="gray.400" />
+              </NativeButton>
+              )}
+          </HStack>
 
-        <Text fontFamily='heading' fontSize={16} mb={4}>
+        <Heading fontFamily='heading' fontSize={16} mb={4}>
           Sobre o produto
-        </Text>
+        </Heading>
 
         <Controller
           control={control}
-          name='name'
+          name='title'
+          rules={{ required: 'Informe o título' }}
           render={({ field: { onChange, value }}) => (
             <Input 
               placeholder='Nome do produto'
               onChangeText={onChange}
               value={value}
-              errorMessage={errors.name?.message}
+              errorMessage={errors.title?.message}
             />
           )}
         />
 
         <Controller
           control={control}
-          name='description'
-          render={({ field: { onChange, value }}) => (
+          name="description"
+          rules={{ required: 'Informe a descrição' }}
+          render={({ field: { onChange, value } }) => (
             <Input
-              h='140' multiline={true} maxLength={100} textAlignVertical='top'
-              placeholder='Descrição do produto'
+              placeholder="Descrição do produto"
+              multiline={true}
+              numberOfLines={5}
+              textAlignVertical="top"
               onChangeText={onChange}
               value={value}
               errorMessage={errors.description?.message}
@@ -221,38 +282,38 @@ export function CreateAdverts(){
         />
 
         <Radio.Group 
-          name='ProductsRadio' 
-          value={productIsNew} 
-          onChange={nextValue => setProductIsNew(nextValue)}
+          name='productCondition' 
+          value={isNew} 
+          onChange={nextValue => setIsNew(nextValue)}
         >
           <HStack>
-            <Radio 
-              value='novo'
-              //colorScheme='blue.500'
-            >
-              Produto novo
+            <Radio value="new" my="2" size="sm">
+              <Text color="gray.200" fontSize={14}>
+                Produto novo
+              </Text>
             </Radio>
-            <Radio 
-              value='usado' 
-              ml={5}
-              //colorScheme="blue.500"
-            >
-              Produto usado
+            <Radio value="used" my="2" ml={5} size="sm">
+              <Text color="gray.200" fontSize={14}>
+                Produto usado
+              </Text>
             </Radio>
           </HStack>
         </Radio.Group>
 
-        <Text fontFamily='heading' fontSize={16} mt={4} mb={4}>
+        <Heading fontFamily='heading' fontSize={16} mt={4} mb={4}>
           Venda
-        </Text>
+        </Heading>
 
         <Controller
           control={control}
           name='price'
+          rules={{ required: 'Informe o preço!' }}
           render={({ field: { onChange, value }}) => (
               <Input
                 placeholder='R$ Valor do produto'
                 onChangeText={onChange}
+                h="14"
+                mb={0}
                 value={value}
                 errorMessage={errors.price?.message}
                 keyboardType='numeric'
@@ -260,7 +321,10 @@ export function CreateAdverts(){
           )}
         />
 
-        <Text fontFamily='heading' fontSize={16}>Aceita Troca?</Text>
+        <Heading fontFamily='heading' fontSize={16}>
+          Aceita Troca?
+        </Heading>
+
         <HStack>
           <Switch 
             size='lg'
@@ -271,11 +335,16 @@ export function CreateAdverts(){
           />
         </HStack>
 
-        <Text fontFamily='heading' fontSize={16} mb={3}>
+        <Heading fontFamily='heading' fontSize={16} mb={3}>
           Meios de pagamento aceitos
-        </Text>
+        </Heading>
 
-        <Checkbox.Group value={paymentMethods} onChange={setPaymentMethods}>
+        <Checkbox.Group 
+          value={paymentMethods} 
+          onChange={(value) => setPaymentMethods(value)}
+          accessibilityLabel="Escolha o método de pagamento."
+          m={1}
+        >
           <Checkbox 
             value='boleto'
             mb={2}
@@ -288,7 +357,9 @@ export function CreateAdverts(){
               borderColor: 'blue.500'
             }}
           >
-            Boleto
+            <Text color="gray.300" fontSize={16}>
+              Boleto
+            </Text>
           </Checkbox>
 
           <Checkbox 
@@ -303,7 +374,9 @@ export function CreateAdverts(){
               borderColor: 'blue.500'
             }}
           >
-            Pix
+            <Text color="gray.300" fontSize={16}>
+              Pix
+            </Text>
           </Checkbox>
 
           <Checkbox 
@@ -318,7 +391,9 @@ export function CreateAdverts(){
               borderColor: 'blue.500'
             }}
           >
-            Dinheiro
+            <Text color="gray.300" fontSize={16}>
+              Dinheiro
+            </Text>
           </Checkbox>
 
           <Checkbox 
@@ -333,7 +408,9 @@ export function CreateAdverts(){
               borderColor: 'blue.500'
             }}
           >
-            Cartão de Crédito
+            <Text color="gray.300" fontSize={16}>
+              Cartão de Crédito
+            </Text>
           </Checkbox>
 
           <Checkbox 
@@ -347,7 +424,9 @@ export function CreateAdverts(){
               borderColor: 'blue.500'
             }}
           >
-            Depósito Bancário
+            <Text color="gray.300" fontSize={16}>
+              Depósito Bancário
+            </Text>
           </Checkbox>
         </Checkbox.Group>
 

@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react'
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native'
 import { MaterialIcons, AntDesign, FontAwesome } from '@expo/vector-icons'
+import { Dimensions } from 'react-native'
 import { 
   Box, 
   Icon, 
@@ -17,72 +18,80 @@ import { api } from '@services/api'
 import { useAuth } from '@hooks/useAuth'
 import { AppError } from '@utils/AppError'
 import { formatBRL } from '@utils/formatBRL'
-import { NewProductDTO } from '@dtos/NewProductDTO'
 import { AppNavigatorRoutesProps } from '@routes/app.routes'
 
 import { Button } from '@components/Button'
 import { UserPhoto } from '@components/UserPhoto'
 import { PaymentIcons } from '@components/PaymentsIcons'
 import { ImagePreviewCarousel } from '@components/ImagePreviewCarousel'
+import { ProductDTO } from '@dtos/ProductDTO'
 
 interface RouteParams {
-  product: string
-  edit?: boolean
-}
-
-
-export function PreviewProduct() {
-  const navigation = useNavigation<AppNavigatorRoutesProps>();
-  const route = useRoute()
-  const toast = useToast()
-  
-  const { user } = useAuth()
-  const { product, edit } = route.params as RouteParams
-  
-  const [isLoadingButton, setIsLoadingButton] = useState(false)
-  const [productData, setProductData] = useState<NewProductDTO>({} as NewProductDTO)
-
-  function handleBackToEditProduct() {
-    navigation.navigate('createAdverts')
+  title: string;
+  description: string;
+  price: string;
+  images: any[];
+  paymentMethods: string[];
+  isNew: boolean;
+  acceptTrade: boolean;
   }
 
-  function loadProductData() {
-    setProductData(JSON.parse(product))
+
+export function PreviewAdverts() {
+  const navigation = useNavigation<AppNavigatorRoutesProps>();
+
+  const toast = useToast()
+
+  const { user } = useAuth()
+
+  const route = useRoute()
+  const { 
+    title,
+    description,
+    price,
+    images,
+    paymentMethods,
+    isNew,
+    acceptTrade,
+  } = route.params as RouteParams
+  
+  const [isLoadingButton, setIsLoadingButton] = useState(false)
+  const [productData, setProductData] = useState<ProductDTO>({} as ProductDTO)
+
+  function handleGoBack() {
+    navigation.goBack();  
   }
 
   async function handlePublishProduct() {
     try {
       setIsLoadingButton(true)
 
-      const response = await api.post('/products', {
-        name: productData.name,
-        description: productData.description,
-        is_new: productData.is_new,
-        accept_trade: productData.accept_trade,
-        payment_methods: productData.payment_methods,
-        price: productData.price,
+      const product = await api.post('/products', {
+        name: title,
+        description,
+        price: parseInt(price.replace(/[^0-9]/g, '')),
+        payment_methods: paymentMethods,
+        is_new: isNew,
+        accept_trade: acceptTrade,
       })
 
-      const data = new FormData()
-      data.append('product_id', response.data.id)
+      const imageData = new FormData()
 
-      productData.product_images.forEach((image) => {
-        const fileExtension = image.uri.split('.').pop()
-        const userName = user.name.replace(' ', '')
-
-        const photoFile = {
-          name: `${userName}.${fileExtension}`,
-          uri: image.uri,
-          type: `image/${fileExtension}`,
+      images.forEach((item) => {
+        const imageFile = {
+          ...item,
+          name: user.name + '.' + item.name,
         } as any
 
-        data.append('images', photoFile)
+        imageData.append('images', imageFile)
       })
 
-      await api.post('/products/images', data, {
+      imageData.append('product_id', product.data.id)
+
+      await api.post('/products/images', imageData, {
         headers: {
-          'Content-Type': 'multipart/form-data'
-        }
+          'Content-Type': 'multipart/form-data',
+        },
       })
 
       await toast.show({
@@ -92,7 +101,10 @@ export function PreviewProduct() {
         duration: 3000,
       })
 
-      navigation.navigate('myAdverts');
+      navigation.navigate('myProduct', {
+        id: product.data.id,
+      });
+
     } catch(error) {
       const isAppError = error instanceof AppError
       const title = isAppError ? error.message : 'Não foi possível publicar o produto.'
@@ -108,6 +120,7 @@ export function PreviewProduct() {
     }
   }
 
+/*
   async function handleEditProduct() {
     try {
       setIsLoadingButton(true)
@@ -184,12 +197,16 @@ export function PreviewProduct() {
   useFocusEffect(
     useCallback(() => {
       loadProductData()
-    }, [ product, edit ])
+    }, [ product ])
   )
+*/
 
   return (
     <>
-      <ScrollView bg='gray.700'>
+      <ScrollView 
+        contentContainerStyle={{ flexGrow: 1 }}
+        showsVerticalScrollIndicator={false}
+        bg='gray.700'>
         <Box safeArea bg='blue.500'>
           <Center>
             <Heading mt={5} fontSize='md' color='gray.700'>
@@ -202,19 +219,19 @@ export function PreviewProduct() {
         </Box>
         
       <ImagePreviewCarousel
-        images={productData.product_images}
+        images={images}
       />
 
         <Box w='100%' px={6} mt={5}>
           <HStack alignItems='center'>
             <UserPhoto
-              source={{uri: `${api.defaults.baseURL}/images/${productData.user?.avatar}`}}
+              source={{uri: `${api.defaults.baseURL}/images/${user?.avatar}`}}
               alt='Imagem do usuário'
               size={10}
             />
 
             <Text ml='4' color='gray.100'>
-              {productData.user?.name}
+              {user.name}
             </Text>
           </HStack>
 
@@ -224,26 +241,26 @@ export function PreviewProduct() {
               rounded='2xl' backgroundColor='gray.500'
             >
               <Text color='gray.200' fontSize='xs' fontFamily='heading'>
-                {productData.is_new ? 'NOVO': 'USADO'}
+                {isNew ? 'NOVO': 'USADO'}
               </Text>
             </Box>
 
             <HStack alignItems='center' justifyContent='space-between'>
               <Heading w={200} numberOfLines={1}>
-                {productData.name}
+                {title}
               </Heading>
 
               <HStack alignItems='center'>
                 <Text 
                   alignItems='flex-end' ml={1} color='blue.500' fontFamily='heading' fontSize={20}
                 >
-                  {formatBRL(productData.price)}
+                R$ {price}
                 </Text>
               </HStack>
             </HStack>
 
             <Text mt={2} color='gray.200'>
-              {productData.description}
+              {description}
             </Text>
 
             <HStack mt={5}>
@@ -252,7 +269,7 @@ export function PreviewProduct() {
               </Text>
 
               <Text ml={2} color='gray.200'>
-                {productData.accept_trade ? 'Sim' : 'Não'}
+                {acceptTrade ? 'Sim' : 'Não'}
               </Text>
             </HStack>
 
@@ -261,7 +278,7 @@ export function PreviewProduct() {
                 Meio de Pagamento:
               </Text>
 
-              {productData.payment_methods?.map((item) => (
+              {paymentMethods?.map((item) => (
                 <PaymentIcons key={item} name={item} id={item} />
               ))}
             </VStack>
@@ -274,7 +291,7 @@ export function PreviewProduct() {
       
       <HStack mt={5} mb={5} px={6} justifyContent='space-between' alignItems='center'>
         <Button 
-          onPress={handleBackToEditProduct} 
+          onPress={handleGoBack} 
           title='Voltar e editar'
           variant='secondary' w={165}
           leftIcon={
@@ -286,7 +303,7 @@ export function PreviewProduct() {
         />
 
         <Button 
-          onPress={!edit ? handlePublishProduct : handleEditProduct}
+          onPress={handlePublishProduct}
           isLoading={isLoadingButton}
           title='Publicar' 
           w={165}

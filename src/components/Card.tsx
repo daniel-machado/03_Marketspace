@@ -1,76 +1,138 @@
-import { useNavigation } from '@react-navigation/native'
-import {Image, 
-        Text, 
-        HStack, 
-        Box, 
-        Pressable 
-      } from 'native-base'
+import { VStack, IStackProps, Image, Text, Heading, Box } from 'native-base'
+import { TouchableOpacity } from 'react-native'
 
-import { api } from '@services/api'
-import { formatBRL } from '@utils/formatBRL'
-import { ProductDTO } from '@dtos/ProductDTO'
+import { useNavigation } from '@react-navigation/native'
 import { AppNavigatorRoutesProps } from '@routes/app.routes'
 
-import { UserPhoto } from '@components/UserPhoto';
-
-interface CardsProps {
-  item: ProductDTO
+type Props = IStackProps & {
+  title: string
+  price: string
+  used: boolean
+  active: boolean
+  image: string
+  id: string
+  showProfile?: boolean
+  profileImage?: string
 }
 
-export function Card({ item }: CardsProps) {
+export const Card = ({
+  title,
+  price,
+  used,
+  active = true,
+  image,
+  profileImage,
+  showProfile = false,
+  id,
+  ...rest
+}: Props) => {
 
   const navigation = useNavigation<AppNavigatorRoutesProps>()
 
-  function handleProductToBuy(id: string) {
-    navigation.navigate('productToBuy', { productId: id })
+  const handleGoMyAd = () => {
+    if (showProfile) {
+      navigation.navigate('adverts', { id })
+    } else {
+      navigation.navigate('myProduct', { id })
+    }
   }
 
-  return(
-    <Pressable 
-      w={150} h={140} mb={6} 
-      onPress={() => handleProductToBuy(item.id!)}
-    >
-      <UserPhoto 
-        source={{ uri: `${api.defaults.baseURL}/images/${item.user.avatar}` }}
-        alt='User image'
-        size={8}
-        position='absolute' 
-        top={2} 
-        left={1} 
-        zIndex={1}
-      />
-      
-      <Box
-        position='absolute'
-        top={2}
-        right={1}
-        zIndex={10}
-        backgroundColor={ item.is_new ? 'blue' : 'gray.200' }
-        rounded='2xl'
-        px={2}
-        py={1}
-      >
-        <Text color='gray.700' fontSize={10} fontFamily='heading'>
-          { item.is_new ? 'NOVO': 'USADO' }
+  return (
+    <TouchableOpacity onPress={handleGoMyAd}>
+      <VStack position="relative" {...rest} mt={2}>
+        <Box
+          bg={!used ? 'blue.default' : 'gray.200'}
+          position="absolute"
+          zIndex={100}
+          borderRadius={10}
+          py={1}
+          px={2}
+          right={1}
+          top={1}
+          opacity={active ? 100 : 50}
+        >
+          <Heading
+            textTransform="uppercase"
+            color="white"
+            fontSize={10}
+            fontFamily="heading"
+          >
+            {used ? 'Usado' : 'Novo'}
+          </Heading>
+        </Box>
+
+        <Box position="relative" alignItems="center" justifyContent="center">
+          {!active && (
+            <Box
+              position="absolute"
+              zIndex={100}
+              w={160}
+              bg="#1A181B99"
+              height={100}
+              borderRadius={6}
+              justifyContent="flex-end"
+              alignItems="flex-start"
+            >
+              <Heading
+                textTransform="uppercase"
+                color="white"
+                fontSize="xs"
+                textAlign="center"
+                fontFamily="heading"
+                m={2}
+              >
+                Anúncio Desativado
+              </Heading>
+            </Box>
+          )}
+
+          {showProfile && (
+            <Image
+              h={8}
+              w={8}
+              source={{
+                uri: profileImage,
+              }}
+              alt={title}
+              borderRadius="full"
+              position="absolute"
+              zIndex={100}
+              left={1}
+              top={1}
+              borderWidth={2}
+              borderColor="white"
+            />
+          )}
+          <Image
+            h="24"
+            w="lg"
+            source={{
+              uri: image,
+            }}
+            alt={title}
+            resizeMode="cover"
+            borderRadius={10}
+            blurRadius={active ? 0 : 10}
+          />
+        </Box>
+
+        <Text
+          color={active ? 'gray.200' : 'gray.400'}
+          fontSize={14}
+          mt={1}
+          numberOfLines={1}
+        >
+          {title}
         </Text>
-      </Box>
-      
-      <Image 
-        source={{ uri: `${api.defaults.baseURL}/images/${item.product_images[0].path}` }}
-        alt='Imagem do produto'
-        h={100}
-        resizeMode='contain'
-      />
 
-      <Text color={'gray.300'} numberOfLines={1}>
-        {item.name}
-      </Text>
-
-      <HStack alignItems='center'>
-      <Text color={'gray.300'} fontFamily='heading' fontSize={16}>
-        {formatBRL(item.price)}
-      </Text>
-      </HStack>
-    </Pressable>
+        <Heading
+          color={active ? 'gray.200' : 'gray.400'}
+          fontSize={14}
+          fontFamily="heading"
+        >
+          R$ {price}
+        </Heading>
+      </VStack>
+    </TouchableOpacity>
   )
 }

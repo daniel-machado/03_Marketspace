@@ -8,14 +8,22 @@ type StorageAuthTokenProps = {
 }
 
 //Salva o token no storage do dispositivo
-export async function storageAuthTokenSave({token, refresh_token}: StorageAuthTokenProps) {
-  await AsyncStorage.setItem(AUTH_STORAGE, JSON.stringify({ token, refresh_token }));
+export async function storageAuthTokenSave({
+  token, 
+  refresh_token}: StorageAuthTokenProps) {
+  await AsyncStorage.setItem(
+    AUTH_STORAGE, 
+    JSON.stringify({ token, refresh_token }));
 }
 
 // Obtém o token do storage do dispositivo
 export async function storageAuthTokenGet() {
   const response = await AsyncStorage.getItem(AUTH_STORAGE);
-  const { token, refresh_token }: StorageAuthTokenProps = response ? JSON.parse(response) : {}
+
+  const { token, refresh_token }: StorageAuthTokenProps = response 
+  ? JSON.parse(response)
+  : {}
+
   return { token, refresh_token };
 }
 

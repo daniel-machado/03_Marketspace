@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { useNavigation } from '@react-navigation/native';
 import {VStack,  
@@ -30,7 +30,7 @@ interface FormData {
 
 const signInSchema = yup.object({
   email: yup.string().required('Informe seu e-mail.').email('E-mail inválido.'),
-  password: yup.string().required('Informe a senha.'),
+  password: yup.string().required('Informe a senha.').min(6, 'A senha deve ter pelo menos 6 dígitos.'),
 })
 
 export function SignIn(){
@@ -42,7 +42,7 @@ export function SignIn(){
     defaultValues: { email: '', password: '' }
   })
 
-  const { singIn } = useAuth();
+  const { singIn, signOut } = useAuth();
   const navigation = useNavigation<AuthNavigatorRoutesProps>();
   const toast = useToast();
 
@@ -72,13 +72,20 @@ export function SignIn(){
     }
   }
 
+  useEffect(() => {
+    const getOut = async () => {
+      await signOut()
+    }
+    getOut()
+  }, [])
+
   return (
     <ScrollView
       contentContainerStyle={{ flexGrow: 1 }}
       showsVerticalScrollIndicator={false}
       bg="gray.600"
     >
-      <VStack borderBottomRadius={20} flex={1} bg="gray.bg" px={7}>
+      <VStack borderBottomRadius={20} flex={1} bg="gray.700" px={7}>
         <Center my={24}>
           <Logo/>
           <Text 

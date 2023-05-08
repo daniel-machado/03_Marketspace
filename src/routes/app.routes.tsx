@@ -1,146 +1,75 @@
-import { useTheme } from 'native-base';
-import { createBottomTabNavigator, BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
-import HomeSvg from '@assets/homeSVG.svg';
-import AdvertsSvg from '@assets/advertsSVG.svg';
-import LogoutSvg from '@assets/logoutSVG.svg'; 
+import {
+  createNativeStackNavigator,
+  NativeStackNavigationProp,
+} from '@react-navigation/native-stack'
 
-import  Home  from '@screens/Home';
-import { MyAdverts } from '@screens/MyAdverts';
-import { SignIn } from '@screens/SignIn';
+import { SecondaryAppRoutes } from '@routes/secondary.app.routes';
+
+import { Adverts } from '@screens/Adverts';
 import { CreateAdverts } from '@screens/CreateAdverts';
-import { PreviewProduct } from '@screens/PreviewProduct';
+import { PreviewAdverts } from '@screens/PreviewAdverts';
 import { MyProduct } from '@screens/MyProduct';
-import { EditMyAdverts } from '@screens/EditMyAdverts';
-import { DetailsProduct } from '@screens/DetailsProduct';
-import { ProductToBuy } from '@screens/ProductToBuy';
-
-import { useAuth } from '@hooks/useAuth'
+import { EditAdverts } from '@screens/EditAdverts';
+import { PreviewEditAdverts } from '@screens/PreviewEditAdverts';
 
 type AppRoutes = {
-  home: undefined;
-  myAdverts: undefined;
-  signOut: undefined;
+  adverts: { id: string };
+  myProduct: { id: string };
   createAdverts: undefined;
-  productToBuy: { productId: string }
-  editMyAdverts: { productId: string }
-  previewProduct: { product: string, edit?: boolean }
-  detailsProduct: {productId: string }
-  myProduct: { myProductId: string }
+  
+  editAdverts: {
+    title: string
+    description: string
+    price: string
+    images: any[]
+    paymentMethods: string[]
+    isNew: boolean
+    acceptTrade: boolean
+    id: string
+  }
+
+  previewAdverts: {
+    title: string
+    description: string
+    price: string
+    images: any[]
+    paymentMethods: string[]
+    isNew: boolean
+    acceptTrade: boolean
+  }
+
+  previewEditAdverts: {
+    title: string
+    description: string
+    price: string
+    images: any[]
+    paymentMethods: string[]
+    isNew: boolean
+    acceptTrade: boolean
+    id: string
+  }
+
+  app: {
+    screen: 'myAdverts' | 'home' | 'signOut'
+  };
 }
 
-export type AppNavigatorRoutesProps = BottomTabNavigationProp<AppRoutes>;
-const { Navigator, Screen } = createBottomTabNavigator<AppRoutes>();
+const { Navigator, Screen } = 
+  createNativeStackNavigator<AppRoutes>();
 
-export function AppRoutes(){
-  const { sizes, colors } = useTheme();
-  const iconSize = sizes[6];
-  const { signOut } = useAuth()
+export type AppNavigatorRoutesProps = NativeStackNavigationProp<AppRoutes>
 
+export const AppRoutes = () => {
   return (
-    <Navigator screenOptions={{
-      headerShown: false,
-      tabBarShowLabel: false,
-      tabBarActiveTintColor: colors.gray[100],
-      tabBarInactiveTintColor: colors.gray[400],
-      tabBarStyle: {
-        backgroundColor: colors.gray[700],
-        borderTopWidth: 0,
-      }
-    }}>
-        
-        <Screen
-          name="home"
-          component={Home}
-          options={{
-            tabBarIcon: ({ color }) => (
-              <HomeSvg fill={color} width={iconSize} height={iconSize} />
-            ),
-            tabBarItemStyle: {
-              backgroundColor: 'gray.200'
-            }
-          }}
-        />
-
-        <Screen
-          name="myAdverts"
-          component={MyAdverts}
-          options={{
-            tabBarIcon: ({ color }) => (
-              <AdvertsSvg fill={color} width={iconSize} height={iconSize} />
-            )
-          }}
-        />
-
-        <Screen
-          name="signOut"
-          component={SignIn}
-          options={{
-            tabBarIcon: () => (
-              <LogoutSvg fill={'#EE7979'} width={iconSize} height={iconSize} />
-            )
-          }}
-          listeners={() => ({
-            tabPress: async () => {
-              await signOut()
-            }
-          })}
-        />
-
-      <Screen 
-        name='createAdverts'
-        component={CreateAdverts}
-        options={{
-          tabBarButton: () => null,
-          tabBarStyle: { display: 'none' }
-        }}
-      />
-
-      <Screen 
-        name='previewProduct'
-        component={PreviewProduct}
-        options={{
-          tabBarButton: () => null,
-          tabBarStyle: { display: 'none' }
-        }}
-      />
-
-      <Screen 
-        name='myProduct'
-        component={MyProduct}
-        options={{
-          tabBarButton: () => null,
-          tabBarStyle: { display: 'none' }
-        }}
-      />
-
-      <Screen 
-        name='editMyAdverts'
-        component={EditMyAdverts}
-        options={{
-          tabBarButton: () => null,
-          tabBarStyle: { display: 'none' }
-        }}
-      />
-
-      <Screen 
-        name='detailsProduct'
-        component={DetailsProduct}
-        options={{
-          tabBarButton: () => null,
-          tabBarStyle: { display: 'none' }
-        }}
-      />
-
-      <Screen 
-        name='productToBuy'
-        component={ProductToBuy}
-        options={{
-          tabBarButton: () => null,
-          tabBarStyle: { display: 'none' }
-        }}
-      />
-
-
+    <Navigator screenOptions={{ headerShown: false }} 
+      initialRouteName="app">
+      <Screen name="adverts" component={Adverts} />
+      <Screen name='myProduct' component={MyProduct}/>
+      <Screen name='editAdverts' component={EditAdverts} />
+      <Screen name='createAdverts' component={CreateAdverts} />
+      <Screen name='previewAdverts' component={PreviewAdverts} />
+      <Screen name="previewEditAdverts" component={PreviewEditAdverts} />
+      <Screen name="app" component={SecondaryAppRoutes} />
     </Navigator>
   )
 }

@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react'
-import { Dimensions } from 'react-native'
+import { Alert, Dimensions } from 'react-native'
 import {
-  Box, Icon, HStack, Text, Pressable, VStack, Heading, ScrollView, Center, useToast
+  Box, Icon, HStack, Text, Pressable, useTheme, VStack, Heading, ScrollView, Center, useToast, Image
 } from 'native-base'
 
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native'
@@ -18,41 +18,60 @@ import { Loading } from '@components/Loading'
 import { UserPhoto } from '@components/UserPhoto'
 import { PaymentIcons } from '@components/PaymentsIcons'
 import { ImageCarousel } from '@components/ImageCarousel'
+import Carousel from 'react-native-reanimated-carousel'
 
 interface RouteParamsProps {
   myProductId: string
 }
 
 export function MyProduct() {
+  const [isLoading, setIsLoading] = useState(true)
+  const [isDeletingLoading, setIsDeletingLoading] = useState(false)
+  const [isChangingVisibilityLoading, setIsChangingVisibilityLoading] = useState(false);
+  const [productAdverts, setProductAdverts] = useState<ProductDTO>({} as ProductDTO);
+
   const route = useRoute()
   const toast = useToast()
+  const { colors } = useTheme();
+
+  const width = Dimensions.get('window').width;
 
   const navigation = useNavigation<AppNavigatorRoutesProps>()
 
   const { myProductId } = route.params as RouteParamsProps
 
-  const [isLoading, setIsLoading] = useState(false)
-  const [isLoadingButton, setIsLoadingButton] = useState(false)
-  const [product, setProduct] = useState<ProductDTO>({} as ProductDTO)
-
   const height = Dimensions.get('window').height
 
   function handleEditMyProduct() {
-    navigation.navigate('editMyAdverts', { productId: product.id! })
+    navigation.navigate('editAdverts', {
+      title: productAdverts.name,
+      description: productAdverts.description,
+      price: productAdverts.price.toString(),
+      images: productAdverts.product_images,
+      paymentMethods: productAdverts.payment_methods.map((item) => item.key),
+      isNew: productAdverts.is_new,
+      acceptTrade: productAdverts.accept_trade,
+      id: productAdverts.id,
+    });
   }
   
   function handleGoBack() {
-    navigation.navigate('myAdverts')
+    navigation.navigate('app', {screen: 'myAdverts' });
   }
   
   async function fetchGetMyProductById() {
     try {
       setIsLoading(true)
       const { data } = await api.get(`/products/${myProductId}`)
-      setProduct(data)
+      setProductAdverts(data)
+      setIsLoading(false)
     } catch(error) {
       const isAppError = error instanceof AppError
-      const title = isAppError ? error.message : 'Não foi possível carregar a lista'
+      const title = isAppError 
+        ? 
+          error.message 
+        : 
+          'Não foi possível receber os dados do anúncio. Tente Novamente!'
 
       toast.show({
         title,
@@ -67,11 +86,12 @@ export function MyProduct() {
 
   async function handleChangeActiveProduct() {
     try {
-      await api.patch(`/products/${product.id}`, {
-        is_active: !product.is_active,
+      setIsChangingVisibilityLoading(true)
+      await api.patch(`/products/${productAdverts.id}`, {
+        is_active: !productAdverts.is_active,
       });
 
-      setProduct({ ...product, is_active: !product.is_active });
+      setProductAdverts({ ...productAdverts, is_active: !productAdverts.is_active });
     } catch (error) {
       const isAppError = error instanceof AppError
       const title = isAppError ? error.message : 'Não foi possível carregar a lista'
@@ -82,14 +102,15 @@ export function MyProduct() {
         bgColor: 'red.500',
         duration: 3000,
       })
-    }
+      } finally {
+        setIsChangingVisibilityLoading(false);
+      }
   }
 
   async function handleDeleteProduct() {
     try {
-      setIsLoadingButton(true)
+      setIsDeletingLoading(true)
       await api.delete(`/products/${myProductId}`);
-      
       const title = 'Produto deletado com sucesso!'
       toast.show({
         title,
@@ -97,8 +118,8 @@ export function MyProduct() {
         bgColor: 'red.500',
         duration: 3000,
       })
+      navigation.navigate('app', { screen: 'myAdverts' })
 
-      navigation.navigate('myAdverts');
     } catch (error) {
       const isAppError = error instanceof AppError
       const title = isAppError ? error.message : 'Não foi possível carregar a lista'
@@ -110,8 +131,15 @@ export function MyProduct() {
         duration: 3000,
       })
     } finally {
-      setIsLoadingButton(false)
+      setIsDeletingLoading(false);
     }
+  }
+
+  function handleButtonRemoveAd() {
+    Alert.alert('Excluir', 'Deseja excluir o anúncio?', [
+      { text: 'Não', style: 'cancel' },
+      { text: 'Sim', onPress: () => handleDeleteProduct() },
+    ])
   }
 
   useFocusEffect(
@@ -129,127 +157,164 @@ export function MyProduct() {
   }
 
   return (
-    <ScrollView flex={1} backgroundColor='gray.700'>
-      <Center safeArea mt={3}>
-        <Box mb={4} px={6} w='100%'>
-          <HStack justifyContent='space-between'>
-            <Pressable onPress={handleGoBack}>
-              <Icon 
-                as={MaterialIcons} name='arrow-back' size={6}
-              />
-            </Pressable>
-
-            <Pressable onPress={handleEditMyProduct}>
+    <>
+      {
+        isLoading
+        ?
+        <Loading />
+        :
+        <ScrollView 
+          flex={1} 
+          bg='gray.700' 
+          contentContainerStyle={{ flexGrow: 1 }}
+          showsVerticalScrollIndicator={false}
+        >
+        <Center safeArea mt={3}>
+          <Box mb={4} px={6} w='100%'>
+            <HStack justifyContent='space-between'>
+              <Pressable onPress={handleGoBack}>
                 <Icon 
-                  as={AntDesign} name='edit' size={6}
+                  as={MaterialIcons} name='arrow-back' size={6}
                 />
-            </Pressable>
-          </HStack>
-        </Box>
+              </Pressable>
 
-        <Box>
-          <ImageCarousel images={product.product_images} />
+              <Pressable onPress={handleEditMyProduct}>
+                  <Icon 
+                    as={AntDesign} name='edit' size={6}
+                  />
+              </Pressable>
+            </HStack>
+          </Box>
 
-          {!product.is_active && (
-            <Box
-              h='280' w='100%' top='0'
-              position='absolute' zIndex={11} backgroundColor='card-stoped'>
-              <Text color='gray.700' fontSize={14} fontFamily='heading' textAlign='center' mt={130} >
-                ANÚNCIO DESATIVADO
-              </Text>
+          <Box>
+            {!productAdverts.is_active && (
+              <Box
+                h='280' w='100%' top='0'
+                position='absolute' zIndex={11} backgroundColor='card-stoped'>
+                <Heading
+                  textTransform="uppercase"
+                  color="white"
+                  fontSize="lg"
+                  textAlign="center"
+                  fontFamily="heading"
+                >
+                  Anúncio Desativado
+                </Heading>
+              </Box>
+            )}
+            <Box w={width} h={280} >
+              <Carousel
+                loop
+                width={width}
+                autoPlay={productAdverts.product_images.length > 1}
+                data={productAdverts.product_images}
+                scrollAnimationDuration={2000}
+                onSnapToItem={index => index}
+                renderItem={({ item, index }) => (  
+                  <Image
+                    key={index}
+                    source={{ uri: `${api.defaults.baseURL}/images/${item.path}` }}
+                    h={300}
+                    w="100%"
+                    alt='images'
+                    resizeMode="cover"
+                  />
+                )}
+              />
             </Box>
-          )}
-        </Box>
-        
+          </Box>
+          
 
-        <Box w='100%' px={6} mt={5}>
-          <HStack alignItems='center'>
-            <UserPhoto
-              source={{ uri: `${api.defaults.baseURL}/images/${product.user?.avatar}` }}
-              alt='Imagem do usuário'
-              size={10}
-            />
+          <Box w='100%' px={6} mt={5}>
+            <HStack alignItems='center'>
+              <UserPhoto
+                source={{ uri: `${api.defaults.baseURL}/images/${productAdverts.user?.avatar}` }}
+                alt='Imagem do usuário'
+                size={10}
+              />
 
-            <Text ml='4' color='gray.100'>
-              {product.user?.name}
-            </Text>
-          </HStack>
-
-          <VStack mt={6}>
-            <Box
-              w='43' mb={1} alignItems='center' rounded='2xl' backgroundColor='gray.500'
-            >
-              <Text color='gray.200' fontSize={10} fontFamily='heading'>
-                {product.is_new ? 'NOVO' : 'USADO'}
+              <Text ml='4' color='gray.100'>
+                {productAdverts.user?.name}
               </Text>
-            </Box>
+            </HStack>
 
-            <HStack alignItems='center' justifyContent='space-between'>
-              <Heading>
-                {product.name}
-              </Heading>
+            <VStack mt={6}>
+              <Box
+                w='43' mb={1} alignItems='center' rounded='2xl' backgroundColor='gray.500'
+              >
+                <Text color='gray.200' fontSize={10} fontFamily='heading'>
+                  {productAdverts.is_new ? 'NOVO' : 'USADO'}
+                </Text>
+              </Box>
 
-              <HStack alignItems='center'>
-                <Text alignItems='flex-end' ml={1} color='blue.500' fontFamily='heading' fontSize={20}>
-                  {formatBRL(product.price)}
+              <HStack alignItems='center' justifyContent='space-between'>
+                <Heading>
+                  {productAdverts.name}
+                </Heading>
+
+                <HStack alignItems='center'>
+                  <Text alignItems='flex-end' ml={1} color='blue.500' fontFamily='heading' fontSize={20}>
+                    {formatBRL(productAdverts.price)}
+                  </Text>
+                </HStack>
+              </HStack>
+
+              <Text mt={2} color='gray.200'>
+                {productAdverts.description}
+              </Text>
+
+              <HStack mt={6}>
+                <Text color='gray.100' fontFamily='heading'>
+                  Aceita troca?
+                </Text>
+
+                <Text ml={2} color='gray.200'>
+                  {productAdverts.accept_trade ? 'SIM' : 'NÃO'}
                 </Text>
               </HStack>
-            </HStack>
 
-            <Text mt={2} color='gray.200'>
-              {product.description}
-            </Text>
+              <VStack mt={1}>
+                <Text color='gray.100' fontFamily='heading'>
+                  Meio de Pagamento:
+                </Text>
+              {productAdverts.payment_methods?.map((item) => (
+                  <PaymentIcons key={item.key} name={item.name} id={item.key}  />
+                ))}
+              </VStack>
 
-            <HStack mt={6}>
-              <Text color='gray.100' fontFamily='heading'>
-                Aceita troca?
-              </Text>
+              <VStack 
+                mt={10} mb={10} justifyContent='space-between' alignItems='center'
+              >
+                <Button 
+                  onPress={handleChangeActiveProduct} 
+                  title={productAdverts.is_active ? 'Desativar anúncio' : 'Ativar anúncio'}
+                  backgroundColor={productAdverts.is_active ? 'gray.100' : 'blue.500'}
+                  mb={2}
+                  leftIcon={
+                    <Icon 
+                      as={AntDesign} name='poweroff'
+                      size={4} color='gray.700'
+                    />
+                  }
+                />
 
-              <Text ml={2} color='gray.200'>
-                {product.accept_trade ? 'SIM' : 'NÃO'}
-              </Text>
-            </HStack>
-
-            <VStack mt={1}>
-              <Text color='gray.100' fontFamily='heading'>
-                Meio de Pagamento:
-              </Text>
-             {product.payment_methods?.map((item) => (
-                <PaymentIcons key={item.key} name={item.name} id={item.key}  />
-              ))}
+                <Button 
+                  isLoading={isDeletingLoading}
+                  onPress={handleButtonRemoveAd} 
+                  title='Excluir anúncio' variant='secondary'
+                  leftIcon={
+                    <Icon 
+                      as={AntDesign} name='delete'
+                      size={4} color='gray.200'
+                    />
+                  }
+                />
+              </VStack>
             </VStack>
-
-            <VStack 
-              mt={10} mb={10} justifyContent='space-between' alignItems='center'
-            >
-              <Button 
-                onPress={handleChangeActiveProduct} 
-                title={product.is_active ? 'Desativar anúncio' : 'Ativar anúncio'}
-                backgroundColor={product.is_active ? 'gray.100' : 'blue.500'}
-                mb={2}
-                leftIcon={
-                  <Icon 
-                    as={AntDesign} name='poweroff'
-                    size={4} color='gray.700'
-                  />
-                }
-              />
-
-              <Button 
-                isLoading={isLoadingButton}
-                onPress={handleDeleteProduct} 
-                title='Excluir anúncio' variant='secondary'
-                leftIcon={
-                  <Icon 
-                    as={AntDesign} name='delete'
-                    size={4} color='gray.200'
-                  />
-                }
-              />
-            </VStack>
-          </VStack>
-        </Box>
-      </Center>
-    </ScrollView>
+          </Box>
+        </Center>
+      </ScrollView>
+      }
+    </>
   )
 }

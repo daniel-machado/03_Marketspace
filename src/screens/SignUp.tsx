@@ -30,6 +30,14 @@ import { UserPhoto } from '@components/UserPhoto';
 import { Input } from '@components/Input';
 import { Button } from '@components/Button';
 
+interface userImageSelectedProps {
+  selected: boolean
+  photo: {
+    uri: string
+    name: string
+    type: string
+  }
+}
 interface FormDataProps {
   name: string;
   email: string;
@@ -51,37 +59,55 @@ const signUpSchema = yup.object({
 export function SignUp(){
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false); 
-  const [userPhoto, setUserPhoto] = useState<any>();
+  const [userImageSelected, setUserImageSelected] = useState({
+    selected: false,
+  } as userImageSelectedProps)
   const [isLoading, setIsLoading] = useState(false);
   
-  const { control, handleSubmit, watch, setValue, formState: { errors } } = useForm<FormDataProps>({
+  const { control, handleSubmit, getValues, formState: { errors } } = useForm<FormDataProps>({
+    defaultValues: {
+      name: '',
+      email: '',
+      phone: '',
+      password: '',
+      password_confirm: '',
+    },
     resolver: yupResolver(signUpSchema)
   });
 
   const toast = useToast();
   const navigation = useNavigation<AuthNavigatorRoutesProps>();
-
   const { singIn } = useAuth();
-
+  const data = new FormData();
 
   function handleGoBack(){
     navigation.navigate('signIn');
   }
 
-  const phoneField = watch('phone');
-  const nameField = watch('name');
-
   async function handleSignUp( { name, email, phone, password}: FormDataProps){
     try{
       setIsLoading(true);
       
-      const data = new FormData();
-      data.append('name', name);
-      data.append('email', email);
-      data.append('tel', phone.replace(/\D/g, ""))
-      data.append('password', password)
-      data.append('avatar', userPhoto)
+      if (!userImageSelected.selected) {
+        return toast.show({
+          title: 'Por favor selecione foto de perfil!',
+          placement: 'top',
+          bgColor: 'red.500',
+        })
+      }
+      const { name } = getValues();
+      const userImage = {
+        ...userImageSelected.photo,
+        name: `${name}.${userImageSelected.photo.name}`.toLowerCase(),
+      } as any
 
+      
+      data.append('avatar', userImage);
+      data.append('name', name.toLowerCase());
+      data.append('email', email.toLowerCase());
+      data.append('tel', phone);
+      data.append('password', password);
+      
       await api.post('/users', data, {
         headers: {
           "Content-Type": "multipart/form-data"
@@ -105,61 +131,60 @@ export function SignUp(){
     }
   }
 
-  async function handleUserPhotoSelect(){
+  const handleUserPhotoSelect = async () => {
     try {
       const photoSelected = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         quality: 1,
         aspect: [4, 4],
-        allowsEditing: true
-      });
+        allowsEditing: true,
+      })
 
-      if(photoSelected.canceled) {
-        return;
+      if (photoSelected.canceled) {
+        return
       }
 
-      if(photoSelected.assets[0].uri){
-        const photoInfo = await FileSystem.getInfoAsync(photoSelected.assets[0].uri);
-        if(photoInfo.size && (photoInfo.size / 1024 / 1024) > 3){
+      if (photoSelected.assets[0].uri) {
+        const photoInfo = await FileSystem.getInfoAsync(
+          photoSelected.assets[0].uri,
+        )
+
+        if (photoInfo.exists && photoInfo.size / 1024 / 1024 > 5) {
           return toast.show({
-            title: "Essa imagem é muito grande. Escolha uma de até 3MB.",
+            title: 'Essa imagem é muito grande. Escolha uma de até 5MB.',
             placement: 'top',
             bgColor: 'red.500',
-            duration: 3000
-          })
-        }
-        const fileExtension = photoSelected.assets[0].uri.split('.').pop();
-        
-        if(nameField === undefined){
-          return toast.show({
-            title: "Digite o Nome antes de selecionar a foto",
-            placement: 'top',
-            bgColor: 'blue.500',
-            duration: 5000
           })
         }
 
-        const nameUser = nameField.replace(' ', '');
+        const fileExtension = photoSelected.assets[0].uri.split('.').pop()
         const photoFile = {
-          name: `${nameUser}.${fileExtension}`.toLowerCase(),
+          name: `${fileExtension}`.toLowerCase(),
           uri: photoSelected.assets[0].uri,
           type: `${photoSelected.assets[0].type}/${fileExtension}`,
-      } as any;
+        } as any
 
-        setUserPhoto(photoFile);
-      }  
+        setUserImageSelected({
+          selected: true,
+          photo: { ...photoFile },
+        })
+
+        toast.show({
+          title: 'Foto selecionada!',
+          placement: 'top',
+          bgColor: 'green.500',
+        })
+      }
     } catch (error) {
-      console.log(error);
+      toast.show({
+        title: 'Erro! Tente novamente mais tarde!',
+        placement: 'top',
+        bgColor: 'red.500',
+      })
+    } finally {
+      setIsLoading(false)
     }
   }
-
-  useEffect(() => {
-    phoneField &&
-      setValue(
-        "phone",
-        phoneField.replace(/(\d{2})(\d{5})(\d{4})/, "($1) $2-$3")
-      );
-  }, [phoneField]);
 
   return (
     <ScrollView
@@ -195,7 +220,9 @@ export function SignUp(){
         <Center>
           <Center my={5}>
             <UserPhoto
-              source={userPhoto ? {uri: userPhoto.uri }: defaultPhotoUser}
+              source={userImageSelected.selected 
+                ? {uri: userImageSelected.photo.uri }
+                : defaultPhotoUser}
               alt="Imagem do Usuário"
               size={PHOTO_SIZE}
             />

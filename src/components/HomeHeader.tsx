@@ -13,7 +13,7 @@ export function HomeHeader(){
   const navigation = useNavigation<AppNavigatorRoutesProps>();
   const { user } = useAuth();
   
-  function handleCreateAd(){
+  function handleCreateAdverts(){
     navigation.navigate('createAdverts')
   }
   return (
@@ -57,7 +57,7 @@ export function HomeHeader(){
             color="white" 
           />
         }
-        onPress={handleCreateAd}
+        onPress={handleCreateAdverts}
       />
     </HStack>
   )
