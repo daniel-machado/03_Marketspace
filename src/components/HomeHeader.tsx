@@ -1,64 +1,48 @@
-import { HStack, Text, VStack, Icon, Heading } from 'native-base'
-import { MaterialIcons } from '@expo/vector-icons'; 
-import { useNavigation } from '@react-navigation/native'
+import { Heading, HStack, Text, useTheme, VStack } from "native-base";
+import { Plus } from "phosphor-react-native";
 
-import { api } from '@services/api'
-import { useAuth } from '@hooks/useAuth'
-import { AppNavigatorRoutesProps } from '@routes/app.routes'
+import { Avatar } from "./Avatar";
+import { Button } from "./Button";
 
-import { Button } from '@components/Button'
-import { UserPhoto } from '@components/UserPhoto'
+import defaultUserAvatar from '@assets/userPhotoDefault.png'
+import { useContext } from "react";
+import { AuthContext } from "@contexts/AuthContext";
+import { api } from "@services/api";
+import { useAuth } from "@hooks/useAuth";
+import { AppNavigatorRoutesProps } from "@routes/app.routes";
+import { useNavigation } from "@react-navigation/native";
 
-export function HomeHeader(){
-  const navigation = useNavigation<AppNavigatorRoutesProps>();
+export function HomeHeader() {
+  const { colors } = useTheme();
+
   const { user } = useAuth();
-  
-  function handleCreateAdverts(){
-    navigation.navigate('createAdverts')
+
+  const navigator = useNavigation<AppNavigatorRoutesProps>();
+
+  function handleCreateProduct() {
+    navigator.navigate('newProduct');
   }
+
   return (
-    <HStack w="100%" justifyContent="space-between">
-      <HStack>
-        <UserPhoto
-          source={{ uri: `${api.defaults.baseURL}/images/${user.avatar}` }}
-          alt='Imagem do usuário'
-          size={45}
+    <HStack width="full" mb={8}>
+      <HStack mr={4} width="1/2">
+        <Avatar 
+          avatarPath={user.avatar}
+          size={12} 
+          alt="Foto do usuário" 
           mr={3}
         />
-
-        <VStack w={140} mr={5}>
-          <Text 
-            lineHeight="sm" 
-            fontFamily='body' 
-            fontSize='md'
-          >
-            Boas vindas,
-          </Text>
-          
-          <Text 
-            lineHeight="sm" 
-            fontFamily='heading' 
-            fontSize='md'
-          >
-            { user.name }!
-          </Text>
-        
+        <VStack>
+          <Text fontSize="md">
+            Boas-vindas,
+          </Text> 
+          <Heading fontSize="md" fontFamily="heading">{user.name.split(' ')[0]}!</Heading>
         </VStack>
       </HStack>
 
-      <Button
-        title='Criar anúncio'
-        flex={1}
-        variant='terceary'
-        leftIcon={
-          <MaterialIcons 
-            name="add" 
-            size={24} 
-            color="white" 
-          />
-        }
-        onPress={handleCreateAdverts}
-      />
+      <Button title="Criar anúncio" variant="black" onPress={handleCreateProduct}>
+        <Plus size={16} color={colors.gray['100']}/>
+      </Button>
     </HStack>
-  )
+  );
 }

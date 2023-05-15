@@ -1,18 +1,13 @@
 import { ImageDTO } from '@dtos/ImageDTO'
 import { PaymentMethodDTO } from '@dtos/PaymentMethodDTO';
 
+import { PaymentMethodTextProps } from "@components/PaymentMethodText";
+
 export type ProductDTO = {
-  id: string
-  name: string
-  description: string
-  price: number
-  is_new: boolean
-  accept_trade: boolean
-  product_images: ImageDTO[]
-  is_active: boolean
-  payment_methods: PaymentMethodDTO[]
-  user?: {
-    avatar: string
-    name: string
-  }
+  title: string;
+  description: string;
+  isNew: string;
+  price: number;
+  accept_trade: boolean;
+  payment_methods: string[];
 }

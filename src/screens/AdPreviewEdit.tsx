@@ -1,5 +1,7 @@
 import { useState } from 'react'
+
 import { useAuth } from '@hooks/useAuth'
+
 import {
   ScrollView,
   Text,
@@ -10,6 +12,7 @@ import {
   useToast,
   Box,
 } from 'native-base'
+import { StatusBar, Dimensions } from 'react-native'
 
 import { useNavigation, useRoute } from '@react-navigation/native'
 import { AppNavigatorRoutesProps } from '@routes/app.routes'
@@ -19,9 +22,9 @@ import { Button } from '@components/Button'
 import { ArrowLeft, Tag } from 'phosphor-react-native'
 import { GeneratePaymentMethods } from '@utils/generatePaymentMethods'
 
+import Carousel from 'react-native-reanimated-carousel'
 import { api } from '@services/api'
 import { AppError } from '@utils/AppError'
-import { ImagePreviewCarousel } from '@components/ImagePreviewCarousel'
 
 type RouteParams = {
   title: string
@@ -34,9 +37,11 @@ type RouteParams = {
   id: string
 }
 
-export function PreviewEditAdverts(){
+export const AdPreviewEdit = () => {
   const [isLoading, setIsLoading] = useState(false)
   const navigation = useNavigation<AppNavigatorRoutesProps>()
+
+  const width = Dimensions.get('window').width
 
   const { user } = useAuth()
 
@@ -95,7 +100,7 @@ export function PreviewEditAdverts(){
           })
         }
       })
-      navigation.navigate('myProduct', { id })
+      navigation.navigate('myad', { id })
     } catch (error) {
       const isAppError = error instanceof AppError
       const title = isAppError
@@ -116,6 +121,7 @@ export function PreviewEditAdverts(){
 
   return (
     <>
+      <StatusBar backgroundColor="#647AC7" />
       <ScrollView
         contentContainerStyle={{ flexGrow: 1 }}
         showsVerticalScrollIndicator={false}
@@ -137,10 +143,28 @@ export function PreviewEditAdverts(){
             </Text>
           </VStack>
 
-          <ImagePreviewCarousel
-            images={images}
+          <Carousel
+            loop
+            width={width}
+            height={320}
+            autoPlay={images.length > 1}
+            data={images}
+            scrollAnimationDuration={1000}
+            renderItem={({ item }) => (
+              <Image
+                w="full"
+                h={80}
+                source={{
+                  uri: item.uri
+                    ? item.uri
+                    : `${api.defaults.baseURL}/images/${item.path}`,
+                }}
+                alt="Ad Image"
+                resizeMode="cover"
+              />
+            )}
           />
-         
+
           <VStack px={5}>
             <HStack mb={6} mt={4} alignItems="center">
               <Image
@@ -224,9 +248,7 @@ export function PreviewEditAdverts(){
             w="47%"
             h={12}
             mt={2}
-            leftIcon={
-              <ArrowLeft color="gray" size={18} />
-            }
+            icon={<ArrowLeft color="gray" size={18} />}
             onPress={handleGoBack}
           />
           <Button
@@ -237,9 +259,7 @@ export function PreviewEditAdverts(){
             isLoading={isLoading}
             h={12}
             mt={2}
-            leftIcon={
-              <Tag color="white" size={18} />
-            }
+            icon={<Tag color="white" size={18} />}
             onPress={handlePublish}
           />
         </HStack>

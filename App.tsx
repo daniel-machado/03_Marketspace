@@ -1,29 +1,27 @@
-import { StatusBar } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
 import { NativeBaseProvider } from 'native-base';
-import { useFonts, Karla_400Regular, Karla_700Bold } from '@expo-google-fonts/karla'
-
-import { Routes } from './src/routes';
-
-import { AuthContextProvider } from '@contexts/AuthContext';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { useFonts, Karla_400Regular, Karla_700Bold } from '@expo-google-fonts/karla';
 
 import { THEME } from './src/theme';
-
 import { Loading } from '@components/Loading';
+import { Routes } from '@routes/index';
+import { AuthContextProvider } from '@contexts/AuthContext';
 
 export default function App() {
-  const [fontLoaded] = useFonts({ Karla_400Regular, Karla_700Bold });
+  const [fontsLoaded] = useFonts({ Karla_400Regular, Karla_700Bold })
 
   return (
-   <NativeBaseProvider theme={THEME}>
-    <StatusBar
-      barStyle='light-content'
-      backgroundColor='transparent'
-      translucent
-    />
-    <AuthContextProvider>
-      {fontLoaded ? <Routes/> : <Loading/>}
-    </AuthContextProvider>
-   </NativeBaseProvider>
+    <NativeBaseProvider theme={THEME}>
+      <GestureHandlerRootView style={{flex: 1}}>
+        <StatusBar style="light" translucent backgroundColor='transparent'/>
+        <AuthContextProvider >
+          {!fontsLoaded 
+            ? <Loading /> 
+            : <Routes />
+          }
+        </AuthContextProvider>
+      </GestureHandlerRootView> 
+    </NativeBaseProvider>
   );
 }
-
